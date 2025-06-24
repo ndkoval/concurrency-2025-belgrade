@@ -48,13 +48,12 @@ class FineGrainedBank(accountsNumber: Int) : Bank {
     }
 
     override fun transfer(fromId: Int, toId: Int, amount: Long) {
-        val (id1, id2) = if (fromId < toId) Pair(fromId, toId) else Pair(toId, fromId)
+        val (id1, id2) = listOf(fromId, toId).sorted()
         val lock1 = accounts[id1].lock
         val lock2 = accounts[id2].lock
         lock1.lock()
         lock2.lock()
         try {
-            // TODO: Make this operation thread-safe via fine-grained locking.
             require(amount > 0) { "Invalid amount: $amount" }
             require(fromId != toId) { "fromId == toId" }
             val from = accounts[fromId]
