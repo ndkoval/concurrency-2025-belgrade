@@ -34,15 +34,10 @@ open class TreiberStackWithElimination<E> : Stack<E> {
         val cellIndex = randomCellIndex()
         val element = eliminationArray[cellIndex]
         if (eliminationArray.compareAndSet(cellIndex, element, CELL_STATE_RETRIEVED)) {
+            @Suppress("UNCHECKED_CAST")
             return element as E?
         }
         return null
-
-        TODO("Implement me!")
-        // TODO: Choose a random cell in `eliminationArray`
-        // TODO: and try to retrieve an element from there.
-        // TODO: On success, return the element.
-        // TODO: Otherwise, if the cell is empty, return `null`.
     }
 
     private fun randomCellIndex(): Int =
