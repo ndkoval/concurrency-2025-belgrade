@@ -23,21 +23,9 @@ open class TreiberStackWithElimination<E> : Stack<E> {
                     return true
                 }
             }
-            eliminationArray.compareAndSet(cellIndex, element, CELL_STATE_EMPTY)
         }
-
-
+        eliminationArray[cellIndex] = CELL_STATE_EMPTY
         return false
-
-
-        TODO("Implement me!")
-        // TODO: Choose a random cell in `eliminationArray`
-        // TODO: and try to install the element there.
-        // TODO: Wait `ELIMINATION_WAIT_CYCLES` loop cycles
-        // TODO: in hope that a concurrent `pop()` grabs the
-        // TODO: element. If so, clean the cell and finish,
-        // TODO: returning `true`. Otherwise, move the cell
-        // TODO: to the empty state and return `false`.
     }
 
     override fun pop(): E? = tryPopElimination() ?: stack.pop()
