@@ -9,39 +9,64 @@ class FineGrainedBank(accountsNumber: Int) : Bank {
     private val accounts: Array<Account> = Array(accountsNumber) { Account() }
 
     override fun getAmount(id: Int): Long {
-        // TODO: Make this operation thread-safe via fine-grained locking.
-        val account = accounts[id]
-        return account.amount
+        val lock = accounts[id].lock
+        lock.lock()
+        try {
+            val account = accounts[id]
+            return account.amount
+        } finally {
+            lock.unlock()
+        }
     }
 
     override fun deposit(id: Int, amount: Long): Long {
-        // TODO: Make this operation thread-safe via fine-grained locking.
-        require(amount > 0) { "Invalid amount: $amount" }
-        val account = accounts[id]
-        check(!(amount > MAX_AMOUNT || account.amount + amount > MAX_AMOUNT)) { "Overflow" }
-        account.amount += amount
-        return account.amount
+        val lock = accounts[id].lock
+        lock.lock()
+        try {
+            require(amount > 0) { "Invalid amount: $amount" }
+            val account = accounts[id]
+            check(!(amount > MAX_AMOUNT || account.amount + amount > MAX_AMOUNT)) { "Overflow" }
+            account.amount += amount
+            return account.amount
+        } finally {
+            lock.unlock()
+        }
     }
 
     override fun withdraw(id: Int, amount: Long): Long {
-        // TODO: Make this operation thread-safe via fine-grained locking.
-        require(amount > 0) { "Invalid amount: $amount" }
-        val account = accounts[id]
-        check(account.amount - amount >= 0) { "Underflow" }
-        account.amount -= amount
-        return account.amount
+        val lock = accounts[id].lock
+        lock.lock()
+        try {
+            require(amount > 0) { "Invalid amount: $amount" }
+            val account = accounts[id]
+            check(account.amount - amount >= 0) { "Underflow" }
+            account.amount -= amount
+            return account.amount
+        } finally {
+            lock.unlock()
+        }
     }
 
     override fun transfer(fromId: Int, toId: Int, amount: Long) {
-        // TODO: Make this operation thread-safe via fine-grained locking.
-        require(amount > 0) { "Invalid amount: $amount" }
-        require(fromId != toId) { "fromId == toId" }
-        val from = accounts[fromId]
-        val to = accounts[toId]
-        check(amount <= from.amount) { "Underflow" }
-        check(!(amount > MAX_AMOUNT || to.amount + amount > MAX_AMOUNT)) { "Overflow" }
-        from.amount -= amount
-        to.amount += amount
+        val (id1, id2) = if (fromId < toId) Pair(fromId, toId) else Pair(toId, fromId)
+        val lock1 = accounts[id1].lock
+        val lock2 = accounts[id2].lock
+        lock1.lock()
+        lock2.lock()
+        try {
+            // TODO: Make this operation thread-safe via fine-grained locking.
+            require(amount > 0) { "Invalid amount: $amount" }
+            require(fromId != toId) { "fromId == toId" }
+            val from = accounts[fromId]
+            val to = accounts[toId]
+            check(amount <= from.amount) { "Underflow" }
+            check(!(amount > MAX_AMOUNT || to.amount + amount > MAX_AMOUNT)) { "Overflow" }
+            from.amount -= amount
+            to.amount += amount
+        } finally {
+            lock1.unlock()
+            lock2.unlock()
+        }
     }
 
     /**
