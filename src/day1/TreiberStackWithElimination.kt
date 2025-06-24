@@ -16,6 +16,20 @@ open class TreiberStackWithElimination<E> : Stack<E> {
     }
 
     protected open fun tryPushElimination(element: E): Boolean {
+        val cellIndex = randomCellIndex()
+        if (eliminationArray.compareAndSet(cellIndex, CELL_STATE_EMPTY, element)) {
+            repeat(ELIMINATION_WAIT_CYCLES) {
+                if (eliminationArray.compareAndSet(cellIndex, CELL_STATE_RETRIEVED, CELL_STATE_EMPTY)) {
+                    return true
+                }
+            }
+            eliminationArray.compareAndSet(cellIndex, element, CELL_STATE_EMPTY)
+        }
+
+
+        return false
+
+
         TODO("Implement me!")
         // TODO: Choose a random cell in `eliminationArray`
         // TODO: and try to install the element there.
@@ -29,6 +43,13 @@ open class TreiberStackWithElimination<E> : Stack<E> {
     override fun pop(): E? = tryPopElimination() ?: stack.pop()
 
     private fun tryPopElimination(): E? {
+        val cellIndex = randomCellIndex()
+        val element = eliminationArray[cellIndex]
+        if (eliminationArray.compareAndSet(cellIndex, element, CELL_STATE_RETRIEVED)) {
+            return element as E?
+        }
+        return null
+
         TODO("Implement me!")
         // TODO: Choose a random cell in `eliminationArray`
         // TODO: and try to retrieve an element from there.
