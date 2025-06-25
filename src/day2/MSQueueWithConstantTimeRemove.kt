@@ -16,8 +16,8 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
 
     override fun enqueue(element: E) {
         while (true) {
-            val node = Node(element, null)
             val curTail = tail.get()
+            val node = Node(element, curTail)
             val success = curTail.next.compareAndSet(null, node)
             if (success) {
                 tail.compareAndSet(curTail, node)
