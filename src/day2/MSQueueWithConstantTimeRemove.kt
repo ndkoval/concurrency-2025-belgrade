@@ -15,6 +15,21 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
     }
 
     override fun enqueue(element: E) {
+        while (true) {
+            val node = Node(element, null)
+            val curTail = tail.get()
+            val success = curTail.next.compareAndSet(null, node)
+            if (success) {
+                tail.compareAndSet(curTail, node)
+            } else {
+                tail.compareAndSet(curTail, curTail.next.get())
+            }
+            if (curTail.extractedOrRemoved) {
+                curTail.remove()
+            }
+            if (success) return
+        }
+
         // TODO: When adding a new node, check whether
         // TODO: the previous tail is logically removed.
         // TODO: If so, remove it physically from the linked list.
@@ -22,6 +37,17 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
     }
 
     override fun dequeue(): E? {
+        while (true) {
+            val curHead = head.get()
+            val curHeadNext = curHead.next.get()
+            if (curHeadNext == null) return null
+            if (head.compareAndSet(curHead, curHeadNext)) {
+                if (curHeadNext.remove()) {
+                    return curHeadNext.element
+                }
+            }
+        }
+
         // TODO: After moving the `head` pointer forward,
         // TODO: mark the node that contains the extracting
         // TODO: element as "extracted or removed", restarting
@@ -103,6 +129,18 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
          * removed by [remove] or extracted by [dequeue].
          */
         fun remove(): Boolean {
+            val removed = markExtractedOrRemoved()
+            val curPrev = prev.get()
+            val curNext = next.get()
+            if (curPrev != null && curNext != null) {
+                curPrev.next.set(curNext)
+                curNext.prev.set(curPrev)
+                if (curNext.extractedOrRemoved) {
+                    curNext.remove()
+                }
+            }
+            return removed
+
             // TODO: As in the previous task, the removal procedure is split into two phases.
             // TODO: First, you need to mark the node as "extracted or removed".
             // TODO: On success, this node is logically removed, and the
