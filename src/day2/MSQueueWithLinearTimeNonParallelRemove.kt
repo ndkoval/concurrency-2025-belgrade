@@ -26,7 +26,7 @@ class MSQueueWithLinearTimeNonParallelRemove<E> : QueueWithRemove<E> {
                 tail.compareAndSet(curTail, curTail.next.get())
             }
             if (curTail.extractedOrRemoved) {
-                curTail.removePhysical()
+                curTail.remove()
             }
         }
     }
@@ -102,19 +102,13 @@ class MSQueueWithLinearTimeNonParallelRemove<E> : QueueWithRemove<E> {
          * removed by [remove] or extracted by [dequeue].
          */
         fun remove(): Boolean {
-            if (markExtractedOrRemoved()) {
-                if (this != tail.get() && this != head.get()) {
-                    removePhysical()
-                }
-                return true
+            val removed = markExtractedOrRemoved()
+            if (this != tail.get() && this != head.get()) {
+                val curPrev = findPrev()
+                val curNext = next.get()
+                curPrev?.next?.set(curNext)
             }
-            return false
-        }
-
-        fun removePhysical() {
-            val curPrev = findPrev()
-            val curNext = next.get()
-            curPrev?.next?.set(curNext)
+            return removed
         }
 
         private fun findPrev(): Node? {
