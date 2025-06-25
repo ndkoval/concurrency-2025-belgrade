@@ -41,6 +41,7 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
             val curHead = head.get()
             val curHeadNext = curHead.next.get()
             if (curHeadNext == null) return null
+            curHeadNext.prev.set(null)
             if (head.compareAndSet(curHead, curHeadNext)) {
                 if (curHeadNext.remove()) {
                     return curHeadNext.element
