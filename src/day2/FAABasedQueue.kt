@@ -7,13 +7,40 @@ import java.util.concurrent.atomic.*
 // TODO: and implement the infinite array on a linked list
 // TODO: of fixed-size `Segment`s.
 class FAABasedQueue<E> : Queue<E> {
+    private val head: AtomicReference<Segment>
+    private val tail: AtomicReference<Segment>
+
+    init {
+        val dummy = Segment(0)
+        head = AtomicReference(dummy)
+        tail = AtomicReference(dummy)
+    }
+
+    private val infiniteArray = AtomicReferenceArray<Any?>(1024) // conceptually infinite array
+    private val enqIdx = AtomicLong(0)
+    private val deqIdx = AtomicLong(0)
+
     override fun enqueue(element: E) {
-        TODO("implement me")
+        while (true) {
+            val i = enqIdx.getAndIncrement()
+            if (infiniteArray.compareAndSet(i.toInt(), null, element)) {
+                return
+            }
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
     override fun dequeue(): E? {
-        TODO("implement me")
+        while (true) {
+            if (deqIdx.get() >= enqIdx.get()) return null
+            val i = deqIdx.getAndIncrement()
+            if (infiniteArray.compareAndSet(i.toInt(), null, POISONED)) {
+                continue
+            }
+            val result = infiniteArray.get(i.toInt()) as E
+            infiniteArray.set(i.toInt(), null)
+            return result
+        }
     }
 }
 
