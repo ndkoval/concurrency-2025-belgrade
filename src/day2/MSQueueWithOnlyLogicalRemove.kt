@@ -87,7 +87,7 @@ class MSQueueWithOnlyLogicalRemove<E> : QueueWithRemove<E> {
          * removed by [remove] or extracted by [dequeue].
          */
         fun remove(): Boolean {
-            return _extractedOrRemoved.compareAndSet(false, true)
+            return markExtractedOrRemoved()
         }
     }
 }
