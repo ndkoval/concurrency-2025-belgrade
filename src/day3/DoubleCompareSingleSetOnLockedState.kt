@@ -28,11 +28,12 @@ class DoubleCompareSingleSetOnLockedState<E : Any>(initialValue: E) : DoubleComp
         expectedA: E, updateA: E, expectedB: E
     ): Boolean {
         while (true) {
-            val curA = a.getAndSet(LOCKED)
-            when (curA) {
-                LOCKED -> continue
+            val curA = a.get()
+            when {
+                curA === LOCKED -> continue
 
-                expectedA -> {
+                curA === expectedA -> {
+                    if (!a.compareAndSet(expectedA, LOCKED)) continue
                     if (b.get() === expectedB) {
                         a.set(updateA)
                         return true
@@ -42,10 +43,7 @@ class DoubleCompareSingleSetOnLockedState<E : Any>(initialValue: E) : DoubleComp
                     }
                 }
 
-                else -> {
-                    a.set(curA)
-                    return false
-                }
+                else -> return false
             }
         }
     }
