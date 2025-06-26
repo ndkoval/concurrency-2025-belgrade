@@ -19,19 +19,27 @@ class DoubleCompareSingleSetOnReentrantLock<E : Any>(initialValue: E) : DoubleCo
     }
 
     override fun getA(): E {
-        // TODO: guard this function with the lock.
-        return a.get()
+        aLock.lock()
+        try {
+            return a.get()
+        } finally {
+            aLock.unlock()
+        }
     }
 
     override fun dcss(
         expectedA: E, updateA: E, expectedB: E
     ): Boolean {
-        // TODO: guard this function with the lock.
-        val curA = a.get()
-        if (curA !== expectedA) return false
-        if (b.get() !== expectedB) return false
-        a.set(updateA)
-        return true
+        aLock.lock()
+        try {
+            val curA = a.get()
+            if (curA !== expectedA) return false
+            if (b.get() !== expectedB) return false
+            a.set(updateA)
+            return true
+        } finally {
+            aLock.unlock()
+        }
     }
 
     override fun setB(value: E) {
