@@ -15,37 +15,37 @@ class DoubleCompareSingleSetOnLockedState<E : Any>(initialValue: E) : DoubleComp
     }
 
     override fun getA(): E {
-        var curA: Any
         while (true) {
-            curA = a.get()
-            if (curA != LOCKED && a.compareAndSet(curA, LOCKED)) {
-                break
+            val curA = a.get()
+            when {
+                curA === LOCKED -> continue
+                else -> return curA as E
             }
         }
-        a.set(curA)
-        return curA as E
     }
 
     override fun dcss(
         expectedA: E, updateA: E, expectedB: E
     ): Boolean {
-        var curA: Any
         while (true) {
-            curA = a.get()
-            if (curA != LOCKED && a.compareAndSet(curA, LOCKED)) {
-                break
+            val curA = a.get()
+            when {
+                curA === LOCKED -> continue
+
+                curA === expectedA -> {
+                    if (!a.compareAndSet(expectedA, LOCKED)) continue
+                    if (b.get() === expectedB) {
+                        a.set(updateA)
+                        return true
+                    } else {
+                        a.set(expectedA)
+                        return false
+                    }
+                }
+
+                else -> return false
             }
         }
-        if (curA !== expectedA) {
-            a.set(curA)
-            return false
-        }
-        if (b.get() !== expectedB) {
-            a.set(curA)
-            return false
-        }
-        a.set(updateA)
-        return true
     }
 
     override fun setB(value: E) {
