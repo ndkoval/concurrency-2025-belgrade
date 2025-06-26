@@ -2,6 +2,7 @@
 
 package day3
 
+import day3.DoubleCompareSingleSetOnDescriptor
 import day3.DoubleCompareSingleSetOnDescriptor.Status.*
 import java.util.concurrent.atomic.*
 
@@ -16,8 +17,13 @@ class DoubleCompareSingleSetOnDescriptor<E : Any>(initialValue: E) : DoubleCompa
     }
 
     override fun getA(): E {
-        // TODO: 'a' can store CAS2Descriptor
-        return a.get() as E
+        while (true) {
+            val curA = a.get()
+            when {
+                curA is DoubleCompareSingleSetOnDescriptor<*>.DcssDescriptor -> curA.process()
+                else -> return curA as E
+            }
+        }
     }
 
     override fun dcss(expectedA: E, updateA: E, expectedB: E): Boolean {
@@ -32,9 +38,41 @@ class DoubleCompareSingleSetOnDescriptor<E : Any>(initialValue: E) : DoubleCompa
         val status = AtomicReference(UNDECIDED)
 
         fun apply() {
-            // TODO: (1) Install the descriptor to 'a'
-            // TODO: (2) Apply logically: check whether 'b' == expectedB and update the status
-            // TODO: (3) Apply physically: update 'a'
+            while (true) {
+                val curA = a.get()
+                when {
+                    curA is DoubleCompareSingleSetOnDescriptor<*>.DcssDescriptor -> curA.process()
+
+                    curA === expectedA -> {
+                        if (!a.compareAndSet(expectedA, this)) continue
+                        process()
+                        return
+                    }
+
+                    else -> return
+                }
+            }
+        }
+
+        fun process() {
+            applyLogically()
+            applyPhysically()
+        }
+
+        private fun applyLogically() {
+            if (b.get() === expectedB) {
+                status.compareAndSet(UNDECIDED, SUCCESS)
+            } else {
+                status.compareAndSet(UNDECIDED, FAILED)
+            }
+        }
+
+        private fun applyPhysically() {
+            if (status.get() == SUCCESS) {
+                a.compareAndSet(this, updateA)
+            } else {
+                a.compareAndSet(this, expectedA)
+            }
         }
     }
 
