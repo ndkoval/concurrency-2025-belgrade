@@ -15,18 +15,35 @@ class DoubleCompareSingleSetOnLockedState<E : Any>(initialValue: E) : DoubleComp
     }
 
     override fun getA(): E {
-        // TODO: Cover the case of `a.get() === LOCKED`.
-        return a.get() as E
+        var curA: Any
+        while (true) {
+            curA = a.get()
+            if (curA != LOCKED && a.compareAndSet(curA, LOCKED)) {
+                break
+            }
+        }
+        a.set(curA)
+        return curA as E
     }
 
     override fun dcss(
         expectedA: E, updateA: E, expectedB: E
     ): Boolean {
-        // TODO: Make me thread-safe by "locking" the `a` reference
-        // TODO: atomically changing it to the LOCKED state.
-        val curA = a.get()
-        if (curA !== expectedA) return false
-        if (b.get() !== expectedB) return false
+        var curA: Any
+        while (true) {
+            curA = a.get()
+            if (curA != LOCKED && a.compareAndSet(curA, LOCKED)) {
+                break
+            }
+        }
+        if (curA !== expectedA) {
+            a.set(curA)
+            return false
+        }
+        if (b.get() !== expectedB) {
+            a.set(curA)
+            return false
+        }
         a.set(updateA)
         return true
     }
