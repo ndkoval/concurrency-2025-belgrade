@@ -17,8 +17,14 @@ class AtomicArrayWithCAS2SingleWriter<E : Any>(size: Int, initialValue: E) {
     }
 
     fun get(index: Int): E {
-        // TODO: the cell can store CAS2Descriptor
-        return array[index] as E
+        val cur = array[index]
+        if (cur is AtomicArrayWithCAS2SingleWriter<*>.CAS2Descriptor) {
+            return when (cur.status.get()) {
+                SUCCESS -> if (index == cur.index1) cur.update1 else cur.update2
+                else -> if (index == cur.index1) cur.expected1 else cur.expected2
+            } as E
+        }
+        return cur as E
     }
 
     fun cas2(
@@ -41,10 +47,62 @@ class AtomicArrayWithCAS2SingleWriter<E : Any>(size: Int, initialValue: E) {
         val status = AtomicReference(UNDECIDED)
 
         fun apply() {
-            // TODO: Install the descriptor, update the status, and update the cells;
-            // TODO: create functions for each of these three phases.
-            // TODO: In this task, only one thread can call cas2(..),
-            // TODO: so cas2(..) calls cannot be executed concurrently.
+            while (true) {
+                val cur1 = array[index1]
+                val cur2 = array[index2]
+                when {
+                    cur1 is AtomicArrayWithCAS2SingleWriter<*>.CAS2Descriptor &&
+                            cur2 is AtomicArrayWithCAS2SingleWriter<*>.CAS2Descriptor -> {
+                        cur1.process()
+                        cur2.process()
+                    }
+
+                    cur1 is AtomicArrayWithCAS2SingleWriter<*>.CAS2Descriptor &&
+                            cur2 == expected2 -> {
+                        cur1.process()
+                        if (!array.compareAndSet(index2, expected2, this)) continue
+                        process()
+                    }
+
+                    cur1 == expected1 &&
+                            cur2 is AtomicArrayWithCAS2SingleWriter<*>.CAS2Descriptor -> {
+                        cur2.process()
+                        if (!array.compareAndSet(index1, expected1, this)) continue
+                        process()
+                    }
+
+                    cur1 == expected1 && cur2 == expected2 -> {
+                        if (!array.compareAndSet(index1, expected1, this)) continue
+                        if (!array.compareAndSet(index2, expected2, this)) continue
+                        process()
+                        return
+                    }
+
+                    else -> {
+                        status.compareAndSet(UNDECIDED, FAILED)
+                        return
+                    }
+                }
+            }
+        }
+
+        fun process() {
+            applyLogically()
+            applyPhysically()
+        }
+
+        private fun applyLogically() {
+            status.compareAndSet(UNDECIDED, SUCCESS)
+        }
+
+        private fun applyPhysically() {
+            if (status.get() == SUCCESS) {
+                array.compareAndSet(index1, this, update1)
+                array.compareAndSet(index2, this, update2)
+            } else {
+                array.compareAndSet(index1, this, expected1)
+                array.compareAndSet(index2, this, expected2)
+            }
         }
     }
 
