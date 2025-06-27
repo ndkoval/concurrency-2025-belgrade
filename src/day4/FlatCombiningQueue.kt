@@ -59,8 +59,7 @@ open class FlatCombiningQueue<E : Any> : Queue<E> {
         for (i in 0..<TASKS_FOR_COMBINER_SIZE) {
             val cur = tasksForCombiner[i]
             when (cur) {
-                null -> continue
-                is Result<*> -> continue
+                null, is Result<*> -> continue
                 Dequeue -> tasksForCombiner.set(i, Result(queue.removeFirstOrNull()))
                 else -> tasksForCombiner.set(i, Result(queue.add(cur as E)))
             }
