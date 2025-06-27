@@ -21,7 +21,7 @@ import kotlin.test.*
 */
 class CounterTest {
     @Test
-    fun test() {
+    fun test() = Lincheck.runConcurrentTest {
         var counter = 0
         val t1 = thread {
             counter++
