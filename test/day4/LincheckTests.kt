@@ -4,6 +4,10 @@ import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
 import java.util.concurrent.*
 import kotlin.concurrent.*
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.asJavaAtomic
+import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.test.*
 
 
@@ -20,18 +24,19 @@ import kotlin.test.*
          6. Debug the test with the plugin.
 */
 class CounterTest {
+    @OptIn(ExperimentalAtomicApi::class)
     @Test
     fun test() = Lincheck.runConcurrentTest {
-        var counter = 0
+        val counter = AtomicInt(0)
         val t1 = thread {
-            counter++
+            counter.incrementAndFetch()
         }
         val t2 = thread {
-            counter++
+            counter.incrementAndFetch()
         }
         t1.join()
         t2.join()
-        assert(counter == 2) { "The counter should be equal to 2" }
+        assert(counter.asJavaAtomic().get() == 2) { "The counter should be equal to 2" }
     }
 }
 
