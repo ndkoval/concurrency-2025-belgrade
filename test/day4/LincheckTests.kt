@@ -52,7 +52,15 @@ class CounterTest {
 class ScheduledThreadPoolExecutorTest {
     @Test
     fun test() = Lincheck.runConcurrentTest {
-       // TODO
+        val executor = ScheduledThreadPoolExecutor(2)
+        thread {
+            executor.shutdown()
+        }
+        try {
+            val future = executor.schedule({}, 10, TimeUnit.MILLISECONDS)
+            future.get()
+        } catch (_: RejectedExecutionException) {
+        }
     }
 }
 
